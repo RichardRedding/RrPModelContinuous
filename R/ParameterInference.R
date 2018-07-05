@@ -3,34 +3,36 @@ fn_parameter_mle <- function(v_n_numPayments,v_r_timeOpen,v_r_currentlyOpen){
     s = sum(1-v_r_currentlyOpen)/sum(v_r_timeOpen))
 }
 
-fn_parameter_mleEM <- function(ls_data,v_r_observedTerm){
-  n_numClaims <- length(v_r_observedTerm)
-  v_r_parameter_mle <- c(p=.5,s=.5)
+fn_parameter_mleEM <- function(staticTerm, observedTerm, numObservations){
+  n_numClaims <- length(observedTerm)
+  v_r_parameter_mle <- c(p=mean(pmax(0,numObservations-1))/mean(observedTerm-staticTerm),
+                         s=1/mean(observedTerm-staticTerm))
+  stopping_scale <- max(v_r_parameter_mle)
   eps <- Inf
-  while(sum(abs(eps)) > .001){
-    ls_dataAugmented_exp <- fn_imputeData_expected(ls_data,
-                                                   v_r_observedTerm,
+  while(sum(abs(eps)) > stopping_scale/1000){
+    ls_dataAugmented_exp <- fn_imputeData_expected(staticTerm,
+                                                   observedTerm,
                                                    v_r_parameter_mle["p"],
                                                    v_r_parameter_mle["s"])
-    eps <- fn_parameter_mle(ls_data$numPaymentsObserved,
-                            ls_dataAugmented_exp$v_r_termOpen_observed,
-                            ls_dataAugmented_exp$v_r_currentlyOpen_prob)-v_r_parameter_mle
+    eps <- fn_parameter_mle(numObservations,
+                            ls_dataAugmented_exp$termOpen,
+                            ls_dataAugmented_exp$censored)-v_r_parameter_mle
     v_r_parameter_mle <- v_r_parameter_mle + eps
   }
   v_r_parameter_mle
 }
 
-fn_parameter_sim <- function(n_numSims,ls_data,v_r_observedTerm,v_r_paymentPriorParams,v_r_settlementPriorParams){
-  n_numClaims <- length(v_r_observedTerm)
-  v_r_parameter_init <- fn_parameter_mleEM(ls_data,v_r_observedTerm)
+fn_parameter_sim <- function(n_numSims, staticTerm, observedTerm, numObservations, v_r_paymentPriorParams, v_r_settlementPriorParams){
+  n_numClaims <- length(observedTerm)
+  v_r_parameter_init <- fn_parameter_mleEM(ls_data,observedTerm)
   v_r_parameter_sim  <- matrix(rep(v_r_parameter_init,each=n_numSims),n_numSims,2)
   ptm <- proc.time()["elapsed"]
   for(i in 1:(n_numSims-1)){
-    ls_missingData                <- fn_imputeData_simulated(ls_data,
-                                                             v_r_observedTerm,
+    ls_missingData                <- fn_imputeData_simulated(staticTerm,
+                                                             observedTerm,
                                                              v_r_parameter_sim[i,1],
                                                              v_r_parameter_sim[i,2])
-    v_r_paymentPosteriorParams    <- v_r_paymentPriorParams    + c(sum(ls_data$numPaymentsObserved), sum(ls_missingData$v_r_termOpen_observed))
+    v_r_paymentPosteriorParams    <- v_r_paymentPriorParams    + c(sum(numObservations), sum(ls_missingData$v_r_termOpen_observed))
     v_r_settlementPosteriorParams <- v_r_settlementPriorParams + c(sum(1-ls_missingData$v_b_currentlyOpen), sum(ls_missingData$v_r_termOpen_observed))
     v_r_parameter_sim[i+1,]       <- c(rgamma(1,v_r_paymentPosteriorParams[1],v_r_paymentPosteriorParams[2]),
                                        rgamma(1,v_r_settlementPosteriorParams[1],v_r_settlementPosteriorParams[2]))
@@ -39,15 +41,10 @@ fn_parameter_sim <- function(n_numSims,ls_data,v_r_observedTerm,v_r_paymentPrior
   v_r_parameter_sim
 }
 
-f_llikelihood <- function(ls_data,v_r_observedTerm,v_r_parameters){
-  setkey(ls_data$paymentTimesObserved,claimIdx)
-  l <- ls_data$paymentTimesObserved[,max(paymentTime),claimIdx][J(claimIdx = 1:n_numClaims)]$V1
-  l[is.na(l)] <- 0
+f_llikelihood <- function(staticTerm, observedTerm, numObservations, v_r_parameters){
   w <- sum(v_r_parameters)
   p <- v_r_parameters[1]
-  u <- v_r_observedTerm
-  n <- ls_data$numPaymentsObserved
   #( (exp(-w*l)-exp(-w*u))*s/w + exp(-w*u) )*(p^n)
   #(1-(1-exp(w*(u-l)))*s/w)*exp(-w*u)*(p^n)
-  log(1-(1-exp(w*(u-l)))*(1-p/w)) -w*u + n*log(p)
+  log(1 - (1 - exp(w * staticTerm)) * (1 - p / w)) - w*observedTerm + numObservations * log(p)
 }
