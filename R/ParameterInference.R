@@ -4,23 +4,52 @@ fn_parameter_mle <- function(v_n_numPayments,v_r_timeOpen,v_r_currentlyOpen){
 }
 
 fn_parameter_mleEM <- function(staticTerm, observedTerm, numObservations){
-  n_numClaims <- length(observedTerm)
-  v_r_parameter_mle <- c(p=mean(pmax(0,numObservations-1))/mean(observedTerm-staticTerm),
-                         s=1/mean(observedTerm-staticTerm))
-  stopping_scale <- max(v_r_parameter_mle)
-  eps <- Inf
-  while(sum(abs(eps)) > stopping_scale/1000){
-    ls_dataAugmented_exp <- fn_imputeData_expected(staticTerm,
-                                                   observedTerm,
-                                                   v_r_parameter_mle["p"],
-                                                   v_r_parameter_mle["s"])
-    eps <- fn_parameter_mle(numObservations,
-                            ls_dataAugmented_exp$termOpen,
-                            ls_dataAugmented_exp$censored)-v_r_parameter_mle
-    v_r_parameter_mle <- v_r_parameter_mle + eps
+  if(max(numObservations) == 0){
+    c(p = 0, s = 0)
+  } else {
+    n_numClaims <- length(observedTerm)
+    v_r_parameter_mle <- c(p=mean(pmax(0,numObservations-1))/mean(observedTerm-staticTerm),
+                           s=1/mean(observedTerm-staticTerm))
+    stopping_scale <- max(v_r_parameter_mle)
+    eps <- Inf
+    while(sum(abs(eps)) > stopping_scale/1000){
+      ls_dataAugmented_exp <- fn_imputeData_expected(staticTerm,
+                                                     observedTerm,
+                                                     v_r_parameter_mle["p"],
+                                                     v_r_parameter_mle["s"])
+      eps <- fn_parameter_mle(numObservations,
+                              ls_dataAugmented_exp$termOpen,
+                              ls_dataAugmented_exp$censored)-v_r_parameter_mle
+      v_r_parameter_mle <- v_r_parameter_mle + eps
+    }
+    v_r_parameter_mle
   }
-  v_r_parameter_mle
 }
+
+# Rcpp::cppFunction(
+#   'NumericVector rcpp_fn_parameter_mleEM(NumericVector staticTerm, NumericVector observedTerm, IntegerVector numObservations){
+#   if(max(numObservations) == 0){
+#   return NumericVector::create(_["p"] = 0, _["s"] = 0);
+#   } else {
+#   int N = sum(numObservations);
+#   double p = 0.;
+#   double s = 0.;
+#   double next_p = mean(pmax(0,numObservations-1))/mean(observedTerm-staticTerm);
+#   double next_s = 1/mean(observedTerm-staticTerm);
+#   NumericVector censored(numObservations.size());
+#   NumericVector termOpen(numObservations.size());
+#   double scale = next_p + next_s;
+#   while(std::abs(next_p - p) > scale*0.001 || std::abs(next_s - s) > scale*0.001){
+#   p = next_p;
+#   s = next_s;
+#   censored = 1-1/(1+(p+s)/(s*(exp(staticTerm*(p+s))-1)));
+#   termOpen = observedTerm-(1-censored)*(staticTerm-(1/(p+s)-(staticTerm+1/(p+s))*exp(-(p+s)*staticTerm))/(1-exp(-(p+s)*staticTerm)));
+#   next_p = N/sum(termOpen);
+#   next_s = (censored.size()-sum(censored))/sum(termOpen);
+#   }
+#   return NumericVector::create(_["p"] = next_p, _["s"] = next_s);
+#   }
+#   }')
 
 fn_parameter_sim <- function(n_numSims, staticTerm, observedTerm, numObservations, v_r_paymentPriorParams, v_r_settlementPriorParams){
   n_numClaims <- length(observedTerm)
@@ -44,7 +73,9 @@ fn_parameter_sim <- function(n_numSims, staticTerm, observedTerm, numObservation
 f_llikelihood <- function(staticTerm, observedTerm, numObservations, v_r_parameters){
   w <- sum(v_r_parameters)
   p <- v_r_parameters[1]
-  #( (exp(-w*l)-exp(-w*u))*s/w + exp(-w*u) )*(p^n)
-  #(1-(1-exp(w*(u-l)))*s/w)*exp(-w*u)*(p^n)
-  log(1 - (1 - exp(w * staticTerm)) * (1 - p / w)) - w*observedTerm + numObservations * log(p)
+  if(w == 0){
+    0
+  } else {
+    log(1 - (1 - exp(w * staticTerm)) * (1 - p / w)) - w*observedTerm + numObservations * log(p)
+  }
 }
