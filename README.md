@@ -1,1 +1,1 @@
-"# RrPModelContinuous" 
+C:\Users\ReddingR\R\win-library\3.2\Rtools\mingw_64\x86_64-w64-mingw32\include\c++\bits\stl_algo.h|3756|error: invalid initialization of reference of type 'const extractable_list<long long unsigned int, double>&' from expression of type 'extractable_list<node<long long unsigned int, extractable_list, double>, double>'|

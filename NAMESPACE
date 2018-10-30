@@ -1,2 +1,4 @@
-exportPattern("^[[:alpha:]]+")
+export("returnXtraForest")
+export("predict.XtraForest")
 import(data.table)
+import(rscala)

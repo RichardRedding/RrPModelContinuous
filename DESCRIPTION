@@ -1,10 +1,13 @@
 Package: MyPModelContinous
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Model for individual claims development
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Date: 2018-10-20
+Description: Provides utilities for estimating future individual claims development.
+Author@R: person(given="Richard",family="Redding",role=c("aut","cre"),email="red3ng@hotmail.com")
+License: GPL-3
 LazyData: TRUE
 Depends: data.table
+Imports: rscala (>= 3.2.2)
+URL: https://github.com/RichardRedding/IndividualClaimsModel
+BugReports: https://github.com/RichardRedding/IndividualClaimsModel/issues

@@ -27,7 +27,7 @@ fn_parameter_mleEM <- function(staticTerm, observedTerm, numObservations){
 }
 
 # Rcpp::cppFunction(
-#   'NumericVector rcpp_fn_parameter_mleEM(NumericVector staticTerm, NumericVector observedTerm, IntegerVector numObservations){
+#   'NumericVector fn_parameter_mleEM(NumericVector staticTerm, NumericVector observedTerm, IntegerVector numObservations){
 #   if(max(numObservations) == 0){
 #   return NumericVector::create(_["p"] = 0, _["s"] = 0);
 #   } else {
@@ -38,8 +38,7 @@ fn_parameter_mleEM <- function(staticTerm, observedTerm, numObservations){
 #   double next_s = 1/mean(observedTerm-staticTerm);
 #   NumericVector censored(numObservations.size());
 #   NumericVector termOpen(numObservations.size());
-#   double scale = next_p + next_s;
-#   while(std::abs(next_p - p) > scale*0.001 || std::abs(next_s - s) > scale*0.001){
+#   while(std::abs(next_p - p) > 0.001 || std::abs(next_s - s) > 0.001){
 #   p = next_p;
 #   s = next_s;
 #   censored = 1-1/(1+(p+s)/(s*(exp(staticTerm*(p+s))-1)));
