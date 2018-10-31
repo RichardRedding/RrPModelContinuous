@@ -41,9 +41,7 @@ returnXtraForest <- function(covariates, staticTerm, observedTerm, numObservatio
                     collection = "IndexedSeq[Double]",
                     collectionDerefMethod = "apply")
   
-  #accumulator <- '(y1: Double, y2: Double, i: Int) => (y1 * i + y2) / (1 + i)'
-  
-  accumulator <- '(y1: Vector[Double], y2: Vector[Double], i: Int) => (y1 zip y2).map(x => (x._1 * i + x._2) / (i + 1))'
+  accumulator <- '(y1: Vector[Double], y2: Vector[Double], i: Int) => {val res1 = (y1(0) * i + y2(0)) / (i + 1); val res2 = ((y1(1) + y1(0) * y1(0)) * i + (y2(1) + y2(0) * y2(0))) / (i + 1) - res1 * res1; Vector(res1, res2)}'
   
   data <- as.NumericMatrix(cbind(covariates, staticTerm, observedTerm, numObservations))
   
@@ -65,5 +63,7 @@ returnXtraForest <- function(covariates, staticTerm, observedTerm, numObservatio
 
 predict.XtraForest <- function(forest, covariates, staticTerm, predictionTerm){
   data <- as.NumericMatrix(cbind(covariates, staticTerm, predictionTerm))
-  structure(s(data = as.matrix(data), forest = forest) * 'Table(data, true).map(forest predict _).unpackColMajor.toArray', dim = c(length(predictionTerm), 2))
+  structure(s(data = as.matrix(data), forest = forest) * 'Table(data, true).map(forest predict _).unpackColMajor.toArray', 
+            dim = c(length(predictionTerm), 2),
+            dimnames = list(list(), c("predictedMeanNumEvents", "predictedVarNumEvents")))
 }
