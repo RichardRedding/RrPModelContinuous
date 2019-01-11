@@ -53,7 +53,7 @@ returnXtraForest <- function(covariates, staticTerm, observedTerm, numObservatio
             do.call(wrapFunctionMacro, scorer),
             do.call(wrapFunctionMacro, predictor),
             accumulator,
-            'numTrees, numSampledFeatures, greatestLeafSize, interval)',
+            'numTrees, numSampledFeatures, greatestLeafSize, I(interval))',
             sep = ", ")
   
   class(res) <- append(class(res), "XtraForest")
